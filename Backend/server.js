@@ -4,6 +4,7 @@ import db from "./config/db.js";
 import jwt from "jsonwebtoken";
 import bookingsRoute from "./routes/bookings.js";
 import cookieParser from "cookie-parser";
+import bcrypt from "bcrypt";
 
 const app = express();
 app.use(express.json());
@@ -13,36 +14,55 @@ app.use(cors({
   credentials: true
 }));
 
-app.use((req, res, next) =>{
+app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', true);
   next();
-})
+});
 
-
-
-app.get("/", (re, res) => {
+app.get("/", (req, res) => {
   return res.json("from backend side");
 });
 
-// controllers
+// Routes
 app.use("/api", bookingsRoute);
-// signup
+
+//  Signup 
 app.post("/signup", (req, res) => {
   const { username, password } = req.body;
 
-  const query = "INSERT INTO users (username, password) VALUES (?, ?)";
-  db.query(query, [username, password], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: "User already exists or DB error" });
+  // Check if username already exists
+  const checkQuery = "SELECT * FROM users WHERE username = ?";
+  db.query(checkQuery, [username], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+    
+    if (results.length > 0) {
+      return res.status(400).json({ error: "Username already exists" });  
     }
-    return res.status(200).json({ message: "User registered successfully" });
+
+    // Hash  password
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
+      if (err) {
+        return res.status(500).json({ error: "Error hashing password" });
+      }
+
+      // Insert user
+      const insertQuery = "INSERT INTO users (username, password) VALUES (?, ?)";
+      db.query(insertQuery, [username, hashedPassword], (err, result) => {
+        if (err) {
+          return res.status(500).json({ error: "Insert failed" });
+        }
+        return res.status(200).json({ message: "User registered successfully" });
+      });
+    });
   });
 });
 
-// login
+
+//  Login 
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
 
+  // Admin 
   if (username === "admin" && password === "admin123") {
     const token = jwt.sign({ id: 1, role: "admin" }, "secretkey", {
       expiresIn: "1h",
@@ -50,52 +70,55 @@ app.post("/login", (req, res) => {
     return res.status(200).json({ message: "Admin login successful", token });
   }
 
-  const query = "SELECT * FROM users WHERE username = ? AND password = ?";
-  db.query(query, [username, password], (err, results) => {
+  const query = "SELECT * FROM users WHERE username = ?";
+  db.query(query, [username], (err, results) => {
     if (err) return res.status(500).json({ error: "Database error" });
-
     if (results.length === 0) {
-      return res.status(400).json({ error: "Invalid username" });
+      return res.status(400).json({ error: "Invalid username or password" });
     }
-    
-    // console.log(results[0].id)
-    
-    const token = jwt.sign({ id: results[0].id }, "secretkey", {
-      expiresIn: "1h",
-    });
-    res
-      .cookie("accessToken", token, {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000,
-      })
-      .status(200)
-      .json({
-        message: "success",
-        user: {
-          id: results[0].id,
-          username: results[0].username
-        }
+
+    const user = results[0];
+
+    // Compare password
+    bcrypt.compare(password, user.password, (err, isMatch) => {
+      if (err || !isMatch) {
+        return res.status(400).json({ error: "Invalid username or password" });
+      }
+
+      const token = jwt.sign({ id: user.id }, "secretkey", {
+        expiresIn: "1h",
       });
+
+      res
+        .cookie("accessToken", token, {
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000,
+        })
+        .status(200)
+        .json({
+          message: "success",
+          user: {
+            id: user.id,
+            username: user.username
+          }
+        });
+    });
   });
 });
 
-// add service
-
+// Add service
 app.post("/services", (req, res) => {
   const { name } = req.body;
-
   const query = "INSERT INTO services (name) VALUES (?)";
   db.query(query, [name], (err, result) => {
     if (err) {
-      return res
-        .status(500)
-        .json({ error: "service already exists or DB error" });
+      return res.status(500).json({ error: "Service already exists or DB error" });
     }
-    return res.status(200).json({ message: "service add successful" });
+    return res.status(200).json({ message: "Service added successfully" });
   });
 });
 
-// get servises list
+// Get services list
 app.get("/services", (req, res) => {
   const sql = "SELECT * FROM services";
   db.query(sql, (err, data) => {
@@ -104,9 +127,7 @@ app.get("/services", (req, res) => {
   });
 });
 
-
-
-// Dlete service
+// Delete service
 app.delete("/services/:id", (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM services WHERE id = ?";
@@ -119,8 +140,6 @@ app.delete("/services/:id", (req, res) => {
   });
 });
 
-
-
 app.listen(8081, () => {
-  console.log("Listening");
+  console.log("Listening on port 8081");
 });

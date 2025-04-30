@@ -4,14 +4,13 @@ import authenticateToken from '../middlewares/auth.js';
 
 const router = express.Router();
 
+// add booking
 router.post('/bookings', authenticateToken, (req, res) => {
   const { customer_name, address, date_time, service_type,userId } = req.body;
-  // console.log(customer_name, address, date_time, service_type,userId)
  
   if (!customer_name || !address || !date_time || !service_type) {
     return res.status(400).json({ error: 'All fields are required' });
   }
-
   const sql = `
     INSERT INTO bookings (customer_name, address, date_time, service_id, user_id)
     VALUES (?, ?, ?, ?, ?)
@@ -22,7 +21,6 @@ router.post('/bookings', authenticateToken, (req, res) => {
       console.error('Error saving booking:', err);
       return res.status(500).json({ error: 'Server error' });
     }
-
     res.status(201).json({ message: 'Booking successful' });
   });
 });
