@@ -17,21 +17,24 @@ function Login() {
       const res = await axios.post('http://localhost:8081/login', {
         username,
         password,
+      },{
+        withCredentials: true,
       });
-
+      console.log(res.data.user)
       if (username === 'admin' && password === 'admin123') {
-        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res?.data?.user));
         toast.success('Admin login successful');
         navigate('/admin');
       }
       else {
 
-        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res?.data?.user));
         toast.success(res.data.message);
         navigate('/');
       }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Login failed');
+     
     }
   };
 

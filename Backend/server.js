@@ -1,14 +1,23 @@
 import express from "express";
 import cors from "cors";
-import db from './config/db.js'
-import jwt from 'jsonwebtoken';
-import bookingsRoute from './routes/bookings.js'
-
-
+import db from "./config/db.js";
+import jwt from "jsonwebtoken";
+import bookingsRoute from "./routes/bookings.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+
+app.use((req, res, next) =>{
+  res.header('Access-Control-Allow-Credentials', true);
+  next();
+})
+
 
 
 app.get("/", (re, res) => {
@@ -16,7 +25,7 @@ app.get("/", (re, res) => {
 });
 
 // controllers
-app.use('/api', bookingsRoute); 
+app.use("/api", bookingsRoute);
 // signup
 app.post("/signup", (req, res) => {
   const { username, password } = req.body;
@@ -48,17 +57,29 @@ app.post("/login", (req, res) => {
     if (results.length === 0) {
       return res.status(400).json({ error: "Invalid username" });
     }
-
+    
+    // console.log(results[0].id)
+    
     const token = jwt.sign({ id: results[0].id }, "secretkey", {
       expiresIn: "1h",
     });
-    return res.status(200).json({ message: "Login successful", token });
+    res
+      .cookie("accessToken", token, {
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json({
+        message: "success",
+        user: {
+          id: results[0].id,
+          username: results[0].username
+        }
+      });
   });
 });
 
-
-// bookings
-
+// add service
 
 app.post("/services", (req, res) => {
   const { name } = req.body;
@@ -83,35 +104,22 @@ app.get("/services", (req, res) => {
   });
 });
 
-// add service
 
-
-app.post('/services', (req, res) => {
-    const { service_type } = req.body;
-    const sql = "INSERT INTO services (service_type) VALUES (?)";
-    db.query(sql, [service_type], (err, result) => {
-        if (err) return res.status(500).json(err);
-        return res.status(201).json({ message: "Service added successfully", id: result.insertId });
-    });
-});
 
 // Dlete service
-app.delete('/services/:id', (req, res) => {
-    const { id } = req.params;
-    const sql = "DELETE FROM services WHERE id = ?";
-    db.query(sql, [id], (err, result) => {
-      if (err) return res.status(500).json({ message: "Error deleting service" });
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "Service not found" });
-      }
-      return res.status(200).json({ message: "Service deleted successfully" });
-    });
+app.delete("/services/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM services WHERE id = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) return res.status(500).json({ message: "Error deleting service" });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+    return res.status(200).json({ message: "Service deleted successfully" });
   });
+});
 
-//   booking
 
-  
-  
 
 app.listen(8081, () => {
   console.log("Listening");

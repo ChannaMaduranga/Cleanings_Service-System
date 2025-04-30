@@ -1,28 +1,39 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import headerImg from '../../assets/headerImg.png';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 function Home() {
+
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [customer_name, setCustomerName] = useState('');
   const [address, setAddress] = useState('');
   const [date_time, setDateTime] = useState('');
   const [service_type, setServiceType] = useState('');
 
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+
+
   const navigate = useNavigate();
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn = !!localStorage.getItem('user');
+
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
   const [services, setServices] = useState([]);
 
+
+  // fetch services table data
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const res = await axios.get('http://localhost:8081/services');
         setServices(res.data);
-        console.log(res.data);
+        // console.log(res.data);
       } catch (err) {
         console.error('Failed to fetch services:', err);
       }
@@ -36,37 +47,37 @@ function Home() {
       alert('Please fill out all fields.');
       return;
     }
-  
     try {
-      const token = localStorage.getItem('token');
-      console.log('Token:', token);
-      await axios.post(
+      console.log('Token:', user);
+      const res = await axios.post(
         'http://localhost:8081/api/bookings',
         {
           customer_name,
           address,
           date_time,
           service_type,
+          userId: user.id,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          },
-        }
+        { withCredentials: true }
+
       );
-  
-      alert('Booking submitted!');
+      if (res?.data?.message && res?.data?.message == "Booking successful") {
+        toast.success('Booking submitted!');
+      }
+      else {
+        toast.error("Bookig error")
+      }
       closePopup();
     } catch (error) {
       console.error('Booking error:', error);
-      alert('Failed to submit booking.');
+      toast.error('Failed to submit booking.');
     }
   };
 
   return (
     <div className='h-[80vh] w-[80%] mx-auto'>
       <div className=' md:flex justify-center h-full items-center w-full md:flex-row-reverse '>
-       
+
 
         <div className='md:w-[80%] mt-8 md:mt-0'>
           <img src={headerImg} alt='Header' className='w-full' />
@@ -152,7 +163,7 @@ function Home() {
                   >
                     <option value='' disabled>Select a service</option>
                     {services.map((service) => (
-                      <option key={service.id} value={service.name}>
+                      <option key={service.id} value={service.id}>
                         {service.name}
                       </option>
                     ))}

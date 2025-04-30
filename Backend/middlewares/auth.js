@@ -1,22 +1,25 @@
 import jwt from 'jsonwebtoken';
+import cookieParser from "cookie-parser";
 
-// You can move the secret to environment variables for security
-const SECRET_KEY = 'secretkey'; // match with login route
+
+const SECRET_KEY = 'secretkey'; 
 
 
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = req.cookies.accessToken;
 
-  if (!token) {
-    return res.status(401).json({ error: 'Access token missing' });
+  if(!token){
+      return res.send({message:"Unauthorized"});
   }
 
-  jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid token' });
+  jwt.verify(token,SECRET_KEY, (err,decoded) =>{
+      if(err){
+          return res.send({message: "token expired or invalid"});
+      }
 
-    req.user = user;
-    next();
+      // console.log('ok')
+      req.user = decoded;
+      next();
   });
 };
 

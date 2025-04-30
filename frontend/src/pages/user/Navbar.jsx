@@ -3,17 +3,17 @@ import { useNavigate } from 'react-router-dom';
 
 function Navbar() {
   const navigate = useNavigate();
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn = !!localStorage.getItem('user');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
   return (
     <div className='relative'>
-      {/* Main Navbar */}
+     
       <div className='flex justify-between items-center w-[80%] mx-auto h-[10vh] border-b-2'>
         <div className='flex items-center cursor-pointer font-semibold'>
           <img src='' alt='' />
@@ -31,7 +31,7 @@ function Navbar() {
           )}
         </div>
 
-        {/* Hamburger Icon for Mobile */}
+        
         <div className='md:hidden'>
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className='text-3xl'>
             ☰
@@ -39,7 +39,7 @@ function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile  Menu */}
       {isMenuOpen && (
         <div className='md:hidden w-full bg-gray-100 px-6 py-4 absolute'>
           <div className='flex flex-col font-semibold text-lg gap-4'>
