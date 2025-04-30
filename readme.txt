@@ -24,6 +24,7 @@ Use the following command
 2. Database Setup
 ------------------------------------------------------------
 
+- sql file attached
 - Open your database manager (e.g., XAMPP/phpMyAdmin).
 - Import the file named "cleaning_service_db.sql" into your database.
 
